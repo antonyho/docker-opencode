@@ -1,0 +1,4 @@
+# OpenCode configurations directory
+# Contains authentication tokens, session history, and user preferences
+# This directory is mounted to /workspace inside the Docker container
+.opencode-cfg/
