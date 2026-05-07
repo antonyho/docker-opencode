@@ -37,7 +37,7 @@ docker build -t antonyho/docker-opencode .
 ### First Launch Setup
 On first launch, OpenCode will:
 1. Ask for your theme preference
-2. Create a `.agent` directory in your current directory
+2. Create a `.opencode-cfg` directory in your current directory
 
 ### Directory Structure
 - Current directory - Mounted to `/workspace` for code access
