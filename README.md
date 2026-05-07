@@ -1,6 +1,6 @@
 # docker-opencode
 
-# OpenCode in Docker Container
+## OpenCode in Docker Container
 
 A Docker containerization of the OpenCode CLI programming agent for easy deployment and consistent environment setup.
 
