@@ -51,4 +51,4 @@ The Docker run command includes specific flags to handle file permissions:
 - `-u $(id -u):$(id -g)` - Runs container with your host user/group IDs
 
 This prevents permission issues when OpenCode creates files in mounted volumes.
-**You are very likely that you don't need them if you have not configured user namespace on your Docker service.**
+**If your Docker daemon is not configured to use user namespaces, `--userns=host` and `-u $(id -u):$(id -g)` are usually not required.**
