@@ -32,16 +32,24 @@ docker build -t antonyho/docker-opencode .
 
 ## How It Works
 
+### Global Config Location
+The image points OpenCode's [XDG base directories](https://specifications.freedesktop.org/basedir/latest/) at `$WORKSPACE/.opencode-cfg` instead of the container user's home directory:
+
+- `XDG_CONFIG_HOME` → `.opencode-cfg/config` (`opencode.json`, theme, etc.)
+- `XDG_DATA_HOME` → `.opencode-cfg/data` (`auth.json` credentials, logs, git snapshots)
+- `XDG_CACHE_HOME` → `.opencode-cfg/cache` (downloaded binaries, cache)
+- `XDG_STATE_HOME` → `.opencode-cfg/state` (session locks/state)
+
+This means OpenCode's account config, including your provider credentials, ends up stored in the mounted project directory instead of disappearing with the container.
+
 ### First Launch Setup
-On first launch, OpenCode will:
-1. Ask for your theme preference
-2. Create a `.opencode-cfg` directory in your current directory
+On first launch, OpenCode will ask for your theme preference and populate `.opencode-cfg` with the subdirectories above.
 
 ### Directory Structure
 - Current directory - Mounted to `/workspace` for code access
-- `.opencode-cfg` directory will be initialised by OpenCode on first launch
+- `.opencode-cfg` directory is created by the image and populated by OpenCode on first launch
 
-*Consider adding the `.opencode-cfg` directory to your project's `.gitignore` to keep your OpenCode session private.*
+*Add the `.opencode-cfg` directory to your project's `.gitignore` to keep your OpenCode session (including credentials) private.*
 
 ### Permission Handling
 The Docker run command includes specific flags to handle file permissions:
