@@ -30,6 +30,18 @@ If you prefer to build the image yourself: (replace my namespace "antonyho" with
 docker build -t antonyho/docker-opencode .
 ```
 
+Then run your own image — note the tag here matches what you just built, not the `ghcr.io/...` image from Quick Start above:
+
+```bash
+docker run -it --rm \
+    --name opencode \
+    --userns=host \
+    -u $(id -u):$(id -g) \
+    -v $(pwd):/workspace \
+    -w /workspace \
+    antonyho/docker-opencode
+```
+
 ## How It Works
 
 ### Global Config Location
@@ -41,6 +53,8 @@ The image points OpenCode's [XDG base directories](https://specifications.freede
 - `XDG_STATE_HOME` → `.opencode-cfg/state` (session locks/state)
 
 This means OpenCode's account config, including your provider credentials, ends up stored in the mounted project directory instead of disappearing with the container.
+
+`HOME` is also redirected to `.opencode-cfg/home`. OpenCode runs a legacy-config check against `$HOME/.opencode` on startup that isn't governed by the XDG variables above, so `HOME` must point somewhere the container user can actually write to — the default `$HOME` (the image's built-in user's home directory) isn't guaranteed to be, especially when running with `-u $(id -u):$(id -g)` as a different UID than the one that built the image.
 
 ### First Launch Setup
 On first launch, OpenCode will ask for your theme preference and populate `.opencode-cfg` with the subdirectories above.
