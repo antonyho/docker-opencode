@@ -34,11 +34,23 @@ jobs:
           fi
 
       - name: Create release for new version
+        id: create-release
         if: steps.check.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "v${{ steps.npm.outputs.version }}" \
             --title "v${{ steps.npm.outputs.version }}" \
-            --notes "OpenCode v{{ steps.npm.outputs.version }}
+            --notes "OpenCode version ${{ steps.npm.outputs.version }}
             Automated release tracking opencode-ai@${{ steps.npm.outputs.version }} on npm."
+          mkdir -p release-state
+          echo "version=${{ steps.npm.outputs.version }}" >> release-state/release.env
+          echo "tag=v${{ steps.npm.outputs.version }}" >> release-state/release.env
+
+      - name: Save release state artifact
+        if: steps.check.outputs.exists == 'false'
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        with:
+          name: release-metadata
+          path: release-state/
+          retention-days: 1

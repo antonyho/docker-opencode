@@ -3,6 +3,10 @@ name: Create and publish Docker image
 on:
   release:
     types: [published]
+  workflow_run:
+    workflows: ["Check for new OpenCode version"]
+    types:
+      - completed
 
 env:
   REGISTRY: ghcr.io
@@ -16,12 +20,54 @@ jobs:
       packages: write
       attestations: write
       id-token: write
+      actions: read
 
     steps:
+      - name: Check release trigger and get version tag
+        id: check-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            RAW_TAG="${{ github.event.release.tag_name }}"
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+            echo "tag=$RAW_TAG" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
+            if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+              echo "Upstream workflow did not succeed. Skipping build."
+              echo "should_publish=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            ARTIFACTS=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/artifacts" --jq '.artifacts[].name' 2>/dev/null || true)
+            if echo "$ARTIFACTS" | grep -q "^release-metadata$"; then
+              echo "New release metadata artifact found."
+              gh run download "${{ github.event.workflow_run.id }}" --repo "${{ github.repository }}" -n release-metadata -D ./release-state
+              if [ -f "./release-state/release.env" ]; then
+                TAG=$(grep "^tag=" ./release-state/release.env | cut -d'=' -f2)
+                echo "should_publish=true" >> "$GITHUB_OUTPUT"
+                echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+              else
+                echo "release.env not found in artifact."
+                echo "should_publish=false" >> "$GITHUB_OUTPUT"
+              fi
+            else
+              echo "No new release was created by the upstream workflow run. Skipping build."
+              echo "should_publish=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout repository
+        if: steps.check-release.outputs.should_publish == 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ steps.check-release.outputs.tag }}
 
       - name: Log in to the Container registry
+        if: steps.check-release.outputs.should_publish == 'true'
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
           registry: ${{ env.REGISTRY }}
@@ -30,22 +76,32 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
+        if: steps.check-release.outputs.should_publish == 'true'
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=semver,pattern={{version}},value=${{ steps.check-release.outputs.tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.check-release.outputs.tag }}
+            type=semver,pattern={{major}},value=${{ steps.check-release.outputs.tag }}
 
       - name: Build and push Docker image
         id: push
+        if: steps.check-release.outputs.should_publish == 'true'
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
           context: .
           push: true
+          build-args: |
+            OPENCODE_VERSION=${{ steps.check-release.outputs.tag }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Generate artifact attestation
+        if: steps.check-release.outputs.should_publish == 'true'
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
