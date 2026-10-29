@@ -15,6 +15,16 @@ env:
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # Default image: tagged both without suffix and with "-node"
+          - variant: node
+            dockerfile: Dockerfile
+            default: true
+          - variant: ubuntu
+            dockerfile: Dockerfile.ubuntu
+            default: false
     permissions:
       contents: read
       packages: write
@@ -78,13 +88,20 @@ jobs:
         id: meta
         if: steps.check-release.outputs.should_publish == 'true'
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        env:
+          # Annotate the image index too, so GHCR links the package to this repository
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest
-            type=semver,pattern={{version}},value=${{ steps.check-release.outputs.tag }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ steps.check-release.outputs.tag }}
-            type=semver,pattern={{major}},value=${{ steps.check-release.outputs.tag }}
+            type=raw,value=latest,enable=${{ matrix.default }}
+            type=semver,pattern={{version}},value=${{ steps.check-release.outputs.tag }},enable=${{ matrix.default }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.check-release.outputs.tag }},enable=${{ matrix.default }}
+            type=semver,pattern={{major}},value=${{ steps.check-release.outputs.tag }},enable=${{ matrix.default }}
+            type=raw,value=${{ matrix.variant }}
+            type=semver,pattern={{version}},value=${{ steps.check-release.outputs.tag }},suffix=-${{ matrix.variant }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.check-release.outputs.tag }},suffix=-${{ matrix.variant }}
+            type=semver,pattern={{major}},value=${{ steps.check-release.outputs.tag }},suffix=-${{ matrix.variant }}
 
       - name: Build and push Docker image
         id: push
@@ -92,11 +109,13 @@ jobs:
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
           context: .
+          file: ${{ matrix.dockerfile }}
           push: true
           build-args: |
             OPENCODE_VERSION=${{ steps.check-release.outputs.tag }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
 
       - name: Generate artifact attestation
         if: steps.check-release.outputs.should_publish == 'true'

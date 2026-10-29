@@ -21,13 +21,27 @@ docker run -it --rm \
     ghcr.io/antonyho/docker-opencode
 ```
 
+### Image Tags
+
+| Base image | Tags |
+|---|---|
+| `node:current-slim` (default) | `latest`, `node`, `<version>`, `<version>-node` (e.g. `1.0.0`, `1.0`, `1`, `1.0.0-node`, `1.0-node`, `1-node`) |
+| `ubuntu:26.04` | `ubuntu`, `<version>-ubuntu` (e.g. `1.0.0-ubuntu`, `1.0-ubuntu`, `1-ubuntu`) |
+
+```bash
+docker pull ghcr.io/antonyho/docker-opencode:ubuntu
+```
+
 ### Building Your Own Image
 
 If you prefer to build the image yourself: (replace my namespace "antonyho" with yours)
 
 ```bash
-# Build the image
+# Build the default (node) image
 docker build -t antonyho/docker-opencode .
+
+# Build the Ubuntu 26.04 based image
+docker build -f Dockerfile.ubuntu -t antonyho/docker-opencode:ubuntu .
 ```
 
 Then run your own image — note the tag here matches what you just built, not the `ghcr.io/...` image from Quick Start above:
