@@ -56,6 +56,22 @@ docker run -it --rm \
     antonyho/docker-opencode
 ```
 
+## Included Development Tools
+
+Both image variants ship with the same developer toolset on top of their base image, so OpenCode can build, search, lint, and inspect most projects without installing anything first:
+
+| Area | Tools |
+|---|---|
+| Source control | `git`, `git-lfs`, `gh`, `delta` |
+| Search & files | `ripgrep` (`rg`), `fd`, `fzf`, `bat`, `tree`, `file`, `rsync` |
+| Data & text | `jq`, `yq`, `sed`, `grep`, `awk`, `less`, `vim`, `nano` |
+| Networking | `curl`, `wget`, `ssh`, `scp`, `ping`, `dig`, `nc`, `ip`, `lsof` |
+| Build | `gcc`, `g++`, `make`, `cmake`, `ninja`, `autoconf`, `automake`, `libtool`, `pkg-config`, `gdb` |
+| Languages | Node.js + npm, Python 3 (`pip`, `venv`, headers), Go, Rust (`rustc`, `cargo`) |
+| Utilities | `htop`, `sqlite3`, `unzip`, `zip`, `tar`, `xz`, `bzip2`, `zstd`, `shellcheck`, `shfmt`, `hyperfine`, `direnv` |
+
+Debian/Ubuntu package `fd` and `bat` as `fdfind` and `batcat`; the images also provide `fd` and `bat` aliases. The `python` command points to `python3`.
+
 ## How It Works
 
 ### Global Config Location
