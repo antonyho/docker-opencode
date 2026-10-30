@@ -1,0 +1,70 @@
+name: Build check
+
+# Builds every image variant on pull requests so a missing package or broken
+# install step is caught before merge, not at the next automated release.
+on:
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - 'Dockerfile.ubuntu'
+      - 'scripts/**'
+      - '.github/workflows/build-check.yml'
+      - '.github/workflows/publish-docker-image.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { variant: node,        dockerfile: Dockerfile,        toolset: core }
+          - { variant: ubuntu,      dockerfile: Dockerfile.ubuntu, toolset: core }
+          - { variant: full,        dockerfile: Dockerfile,        toolset: full }
+          - { variant: ubuntu-full, dockerfile: Dockerfile.ubuntu, toolset: full }
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Build image
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: false
+          load: true
+          tags: opencode-check:${{ matrix.variant }}
+          build-args: |
+            TOOLSET=${{ matrix.toolset }}
+
+      - name: Smoke test as a non-root user
+        run: |
+          # Run as an arbitrary UID with a writable workspace, like the README does.
+          mkdir -p ws
+          docker run --rm -u "$(id -u):$(id -g)" -v "$PWD/ws:/workspace" \
+            opencode-check:${{ matrix.variant }} sh -euxc '
+              mkdir -p "$HOME"
+              opencode --version
+              node --version; npm --version
+              git --version; git lfs version; gh --version
+              rg --version; fd --version; jq --version; yq --version
+              python --version; python3 -m venv /tmp/venv
+              cc --version; make --version
+            '
+
+      - name: Smoke test full toolset
+        if: matrix.toolset == 'full'
+        run: |
+          docker run --rm -u "$(id -u):$(id -g)" -v "$PWD/ws:/workspace" \
+            opencode-check:${{ matrix.variant }} sh -euxc '
+              go version; rustc --version; cargo --version
+              cmake --version; ninja --version; gdb --version
+              shellcheck --version; shfmt --version; sqlite3 --version
+            '
+
+      - name: Report image size
+        run: docker image ls opencode-check:${{ matrix.variant }}

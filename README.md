@@ -27,6 +27,8 @@ docker run -it --rm \
 |---|---|
 | `node:current-slim` (default) | `latest`, `node`, `<version>`, `<version>-node` (e.g. `1.0.0`, `1.0`, `1`, `1.0.0-node`, `1.0-node`, `1-node`) |
 | `ubuntu:26.04` | `ubuntu`, `<version>-ubuntu` (e.g. `1.0.0-ubuntu`, `1.0-ubuntu`, `1-ubuntu`) |
+| `node:current-slim` + full toolset | `full`, `<version>-full` |
+| `ubuntu:26.04` + full toolset | `ubuntu-full`, `<version>-ubuntu-full` |
 
 ```bash
 docker pull ghcr.io/antonyho/docker-opencode:ubuntu
@@ -42,7 +44,12 @@ docker build -t antonyho/docker-opencode .
 
 # Build the Ubuntu 26.04 based image
 docker build -f Dockerfile.ubuntu -t antonyho/docker-opencode:ubuntu .
+
+# Build with the full toolset (Go, Rust, native build/debug tools)
+docker build --build-arg TOOLSET=full -t antonyho/docker-opencode:full .
 ```
+
+Add apt packages of your own by editing the lists in `scripts/install-tools.sh`.
 
 Then run your own image — note the tag here matches what you just built, not the `ghcr.io/...` image from Quick Start above:
 
@@ -58,19 +65,23 @@ docker run -it --rm \
 
 ## Included Development Tools
 
-Both image variants ship with the same developer toolset on top of their base image, so OpenCode can build, search, lint, and inspect most projects without installing anything first:
+Every image includes the **core** toolset, chosen for what an agent needs in most projects. The `full` tags add language toolchains and native build tools on top, at the cost of a much larger image.
 
-| Area | Tools |
-|---|---|
-| Source control | `git`, `git-lfs`, `gh`, `delta` |
-| Search & files | `ripgrep` (`rg`), `fd`, `fzf`, `bat`, `tree`, `file`, `rsync` |
-| Data & text | `jq`, `yq`, `sed`, `grep`, `awk`, `less`, `vim`, `nano` |
-| Networking | `curl`, `wget`, `ssh`, `scp`, `ping`, `dig`, `nc`, `ip`, `lsof` |
-| Build | `gcc`, `g++`, `make`, `cmake`, `ninja`, `autoconf`, `automake`, `libtool`, `pkg-config`, `gdb` |
-| Languages | Node.js + npm, Python 3 (`pip`, `venv`, headers), Go, Rust (`rustc`, `cargo`) |
-| Utilities | `htop`, `sqlite3`, `unzip`, `zip`, `tar`, `xz`, `bzip2`, `zstd`, `shellcheck`, `shfmt`, `hyperfine`, `direnv` |
+| Area | Core (all images) | Full (`full`, `ubuntu-full` tags) |
+|---|---|---|
+| Source control | `git`, `git-lfs`, `gh` | |
+| Search & files | `rg` (ripgrep), `fd`, `tree`, `file`, `less` | |
+| Data | `jq`, `yq` ([mikefarah/yq](https://github.com/mikefarah/yq)) | `sqlite3` |
+| Network & archives | `curl`, `ssh`, `scp`, `zip`, `unzip`, `xz`, `tar` | |
+| Build | `gcc`, `g++`, `make` (enough for npm/pip native modules) | `cmake`, `ninja`, `autoconf`, `automake`, `libtool`, `pkg-config`, `gdb` |
+| Languages | Node.js + npm, Python 3 with `venv` | Go, Rust (via rustup), Python headers + `pip` |
+| Linting | | `shellcheck`, `shfmt` |
 
-Debian/Ubuntu package `fd` and `bat` as `fdfind` and `batcat`; the images also provide `fd` and `bat` aliases. The `python` command points to `python3`.
+Notes:
+- `fd` is a link to Debian/Ubuntu's `fdfind`, and `python` points to `python3`.
+- The system Python is marked externally managed, so install Python packages into a virtual environment: `python3 -m venv .venv && . .venv/bin/activate`.
+- Go downloads a newer toolchain automatically when a project's `go.mod` requires one (`GOTOOLCHAIN=auto`). Go's module cache lives under `.opencode-cfg` and can grow large; it is safe to delete.
+- Git trusts any repository path (`safe.directory '*'`), so running without `-u` doesn't trigger "dubious ownership" errors.
 
 ## How It Works
 

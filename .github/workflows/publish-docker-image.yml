@@ -21,9 +21,20 @@ jobs:
           # Default image: tagged both without suffix and with "-node"
           - variant: node
             dockerfile: Dockerfile
+            toolset: core
             default: true
           - variant: ubuntu
             dockerfile: Dockerfile.ubuntu
+            toolset: core
+            default: false
+          # Heavier images with Go, Rust and native build/debug tools
+          - variant: full
+            dockerfile: Dockerfile
+            toolset: full
+            default: false
+          - variant: ubuntu-full
+            dockerfile: Dockerfile.ubuntu
+            toolset: full
             default: false
     permissions:
       contents: read
@@ -113,6 +124,7 @@ jobs:
           push: true
           build-args: |
             OPENCODE_VERSION=${{ steps.check-release.outputs.tag }}
+            TOOLSET=${{ matrix.toolset }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
