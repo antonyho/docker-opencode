@@ -21,7 +21,7 @@ jobs:
       - name: Get latest published version from npm
         id: npm
         run: |
-          VERSION=$(npm view opencode-ai version)
+          VERSION=$(npm view @opencode/cli version)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Check if this version was already released
@@ -42,7 +42,7 @@ jobs:
           gh release create "v${{ steps.npm.outputs.version }}" \
             --title "v${{ steps.npm.outputs.version }}" \
             --notes "OpenCode version ${{ steps.npm.outputs.version }}
-            Automated release tracking opencode-ai@${{ steps.npm.outputs.version }} on npm."
+            Automated release tracking @opencode/cli@${{ steps.npm.outputs.version }} on npm."
           mkdir -p release-state
           echo "version=${{ steps.npm.outputs.version }}" >> release-state/release.env
           echo "tag=v${{ steps.npm.outputs.version }}" >> release-state/release.env
