@@ -32,6 +32,7 @@ RUN mkdir -p $HOME $XDG_CONFIG_HOME $XDG_DATA_HOME $XDG_CACHE_HOME $XDG_STATE_HO
 # Declared here, not at the top, so a new OpenCode version only rebuilds this
 # layer and the toolchain layers above stay cached and shared between tags.
 ARG OPENCODE_VERSION=latest
-RUN npm i -g @opencode/cli@${OPENCODE_VERSION#v}
+RUN npm i -g @opencode/cli@${OPENCODE_VERSION#v} \
+    && npm cache clean --force
 
 CMD ["opencode"]
