@@ -2,8 +2,8 @@ name: Check for new OpenCode version
 
 on:
   schedule:
-    # Daily
-    - cron: '0 0 * * *'
+    # 4 times per day
+    - cron: '30 1,4,7,10 * * *'
   workflow_dispatch: {}
 
 permissions:
